@@ -1,0 +1,833 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Diagnóstico – Contador do Trader</title>
+<link rel="icon" type="image/png" sizes="32x32" href="favicon.png" />
+<style>
+:root{
+  /* Cores principais */
+  --bg: #0d0d0d;                   /* fundo escuro moderno */
+  --card: rgba(255,255,255,0.05);  /* cartões translúcidos */
+  --text: #f5f5f5;                 /* texto claro */
+  --muted: #c9c9c9;                /* texto secundário */
+  --brand: #f2b705;                /* amarelo-dourado da logo */
+  --brand-2: #e59f05;              /* tom complementar mais escuro */
+}
+
+*{box-sizing:border-box; margin:0; padding:0}
+
+body{
+  margin:0;
+  font-family: 'Segoe UI', Roboto, Ubuntu, sans-serif;
+  color:var(--text);
+  background-color: var(--bg);
+  display:flex;
+  min-height:100svh;
+  align-items:center;
+  justify-content:center;
+  padding:24px;
+}
+
+/* Container central */
+.container{ 
+  width:100%; 
+  max-width:860px; 
+  padding:24px;
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  background-color: rgb(135 133 133 / 65%);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+
+/* Cabeçalho */
+header{ width: 100%; padding: 10px 0; }
+header .logo{width:48%; max-width: 160px; height:auto; }
+header h1{
+  font-size:24px;
+  margin:0;
+  display:flex; gap: 16px;
+  align-items:center; justify-content: space-between;
+  font-weight: 700;
+  color: var(--brand);
+}
+@media (max-width: 600px) {
+  header h1{flex-direction: column-reverse; text-align: center; }
+}
+header p{margin:0; color:var(--muted); font-size:14px}
+
+/* Barra de progresso */
+.progress{
+  height:10px; background:#20263a; border-radius:999px; overflow:hidden; margin:16px 0 22px;
+}
+.bar{
+  height:100%; width:0%;
+  background:linear-gradient(90deg,var(--brand),var(--brand-2));
+  transition:width .35s ease;
+}
+
+/* Steps */
+.step{display:none; animation:fade .25s ease}
+.step.active{display:block}
+@keyframes fade{from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:translateY(0)}}
+h2{font-size:20px; margin:0 0 12px; font-weight:600}
+.hint{color:var(--muted); font-size:13px; margin-bottom:14px}
+
+/* Grid responsivo */
+.grid{
+  display:grid;
+  gap:12px;
+  grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+  margin-top:15px;
+}
+
+/* Cards das opções */
+fieldset{
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  display: grid;
+  gap: 4px;
+  padding: 4px;
+}
+label.option{
+  display:flex; gap:10px; align-items:flex-start; padding:14px; 
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius:12px;
+  background:#111;
+  cursor:pointer;
+  transition:all .18s ease;
+}
+label.option:hover{
+  border-color:var(--brand);
+  transform:translateY(-2px);
+  box-shadow:0 0 12px rgba(242,183,5,0.2);
+}
+input[type=radio],input[type=checkbox]{
+  margin-top:3px;
+  accent-color:var(--brand);
+}
+
+/* mensagens de erro começam ocultas */
+.error{
+  display: none;
+  font-size: 15px;
+  margin-top: 5px;
+}
+
+/* Navegação */
+.nav{
+  display:flex; gap:12px; justify-content:space-between; margin-top:20px
+}
+.nav .left{display:flex; gap:10px}
+button{
+  appearance:none;
+  border:1px solid #555;
+  background:#1a1a1a;
+  color:var(--text);
+  padding:10px 16px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:600;
+  transition:all .2s ease;
+}
+button.primary{
+  background:var(--brand);
+  color:#111;
+  border: none;
+}
+button.primary:hover{filter:brightness(1.05)}
+button[disabled]{opacity:.5; cursor:not-allowed}
+
+/* Resultado */
+.result{display:none}
+.result.show{display:block}
+.card{
+  background:#111;
+  border:1px solid #333;
+  border-radius:16px;
+  padding:18px;
+  margin:14px 0;
+}
+.result h3{margin:0 0 6px; font-size:20px; color:var(--brand)}
+.result p{margin:8px 0; color:#e5e5e5}
+
+/* Listas de diagnóstico e plano */
+.list-check,
+.plan ul{
+  list-style: none !important;   /* remove o marcador padrão • */
+  padding-left: 0;               /* evita recuo extra do UL */
+  margin: 8px 0 0;
+}
+
+/* li com espaço para o emoji */
+.list-check li,
+.plan li{
+  position: relative;
+  padding-left: 28px;            /* espaço para o emoji à esquerda */
+  line-height: 1.4;
+}
+
+/* garante que o marcador nativo seja ocultado em todos os navegadores */
+.list-check li::marker,
+.plan li::marker{
+  content: "";
+}
+
+/* seus emojis permanecem */
+.list-check li::before{
+  content: "📌";
+  position: absolute; left: 0; top: 0;
+}
+.plan li::before{
+  content: "🎯";
+  position: absolute; left: 0; top: 0;
+}
+
+.plan .cta{
+  display: flex;
+  justify-content: center;
+  margin-top: 12px; /* mantém seu espaçamento */
+}
+
+.plan .cta .btn{
+  /* garante que o botão não estique */
+  width: auto;
+}
+
+/* Botão CTA */
+a.btn{
+  display:inline-block;
+  text-decoration:none;
+  text-align:center;
+  background:linear-gradient(90deg,var(--brand),var(--brand-2));
+  color:#111;
+  font-weight:800;
+  padding:14px 18px;
+  border-radius:12px;
+  border:1px solid var(--brand);
+  transition: all .2s ease;
+}
+a.btn:hover{
+  filter:brightness(1.1);
+  box-shadow: 0 0 12px rgba(242,183,5,0.3);
+}
+
+a.btnEbook {
+    display: inline-block;
+    text-decoration: none;
+    text-align: center;
+    background-color: gray;
+    color: var(--text);
+    font-weight: var(--e-global-typography-accent-font-weight);
+    padding: 14px 18px;
+    border-radius: 30px;
+    border: 1px;
+    transition: all .2s ease;
+}
+</style>
+</head>
+<body>
+    <div id="bkg"></div>
+  <main class="container" role="main" aria-labelledby="title">
+    <header>
+      <div>
+        <h1 id="title"><span>Diagnóstico Fiscal - Tributação de Criptomoedas</span><img class="logo" src="logo.png"></h1>
+      </div>
+    </header>
+
+    <div class="progress" aria-label="Progresso"><div class="bar" id="bar"></div></div>
+
+    <!-- Steps (6 blocos / 8 perguntas) -->
+    <form id="quiz" novalidate>
+
+      <!-- BLOCO 1 -->
+      <section class="step active" data-step="1" data-weight="0">
+        <h2>1) Seu perfil</h2>
+        <div class="grid">
+          <fieldset>
+            <legend class="hint">Gênero</legend>
+            <label class="option"><input type="radio" name="genero" value="Mulher"> <span>Mulher</span></label>
+            <label class="option"><input type="radio" name="genero" value="Homem"> <span>Homem</span></label>
+            <label class="option"><input type="radio" name="genero" value="n/d"> <span>Prefiro não informar</span></label>
+          </fieldset>
+        </div>
+        <div class="grid">
+          <fieldset>
+            <legend class="hint">Idade</legend>
+            <label class="option"><input type="radio" name="idade" value="18-24"> <span>Até 24 anos</span></label>
+            <label class="option"><input type="radio" name="idade" value="25-34"> <span>25 a 34</span></label>
+            <label class="option"><input type="radio" name="idade" value="35-44"> <span>35 a 44</span></label>
+            <label class="option"><input type="radio" name="idade" value="45+"> <span>45 ou mais</span></label>
+          </fieldset>
+        </div>
+        <div class="error" id="err-1">Selecione ao menos uma opção de idade e de gênero.</div>
+        <div class="nav">
+          <span></span>
+          <button type="button" class="primary" data-next>Continuar</button>
+        </div>
+      </section>
+
+      <!-- BLOCO 2 -->
+      <section class="step" data-step="2" data-weight="1">
+        <h2>2) Sua perspectiva sobre criptomoedas</h2>
+        <div class="grid">
+          <fieldset>
+            <legend class="hint">Como você vê as criptomoedas hoje?</legend>
+            <label class="option"><input type="radio" name="visao" value="reserva"> <span>Reserva de valor</span></label>
+            <label class="option"><input type="radio" name="visao" value="protecao"> <span>Proteção de patrimônio</span></label>
+            <label class="option"><input type="radio" name="visao" value="ganhos"> <span>Possibilidade de altos ganhos</span></label>
+          </fieldset>
+        </div>
+        <div class="grid">
+          <fieldset>
+            <legend class="hint">Em que período você conheceu ou iniciou sua relação com criptomoedas?</legend>
+            <label class="option"><input type="radio" name="quando" value="5+"> <span>Há mais de 5 anos</span></label>
+            <label class="option"><input type="radio" name="quando" value="ultimos-5"> <span>Nos últimos 5 anos</span></label>
+            <label class="option"><input type="radio" name="quando" value="este-ano"> <span>Neste ano</span></label>
+          </fieldset>
+        </div>
+        <div class="error" id="err-2">Selecione quando conheceu/começou e sua visão atual.</div>
+        <div class="nav">
+          <div class="left">
+            <button type="button" data-prev>Voltar</button>
+          </div>
+          <button type="button" class="primary" data-next>Continuar</button>
+        </div>
+      </section>
+
+      <!-- BLOCO 3 -->
+      <section class="step" data-step="3" data-weight="2">
+        <h2>3) Seu envolvimento com criptomoedas</h2>
+        <div class="grid">
+          <fieldset>
+            <legend class="hint">Você já operou com criptoativos?</legend>
+            <label class="option"><input type="radio" name="uso" value="frequente"> <span>Sim, opero com frequência</span></label>
+            <label class="option"><input type="radio" name="uso" value="parei"> <span>Já operei, mas parei</span></label>
+            <label class="option"><input type="radio" name="uso" value="nao"> <span>Ainda não, mas quero começar</span></label>
+          </fieldset>
+        </div>
+        <div class="grid">
+          <fieldset>
+            <legend class="hint">Onde você já operou? (marque as que se aplicam)</legend>
+            <label class="option"><input type="checkbox" name="onde" value="nacional"> <span>Exchanges nacionais</span></label>
+            <label class="option"><input type="checkbox" name="onde" value="estrangeira"> <span>Exchanges internacionais</span></label>
+            <label class="option"><input type="checkbox" name="onde" value="defi"> <span>Carteiras / DEXs (DeFi, Metamask etc.)</span></label>
+          </fieldset>
+        </div>
+        <div class="error" id="err-3">Selecione seu nível de uso. (Marcar onde operou é opcional)</div>
+        <div class="nav">
+          <div class="left">
+            <button type="button" data-prev>Voltar</button>
+          </div>
+          <button type="button" class="primary" data-next>Continuar</button>
+        </div>
+      </section>
+
+      <!-- BLOCO 4 -->
+      <section class="step" data-step="4" data-weight="3">
+        <h2>4) Declaração e obrigações</h2>
+        <div class="grid">
+          <fieldset>
+            <legend class="hint">Você já declarou criptomoedas no IRPF?</legend>
+            <label class="option"><input type="radio" name="declarou" value="ok"> <span>Sim, com ajuda especializada</span></label>
+            <label class="option"><input type="radio" name="declarou" value="duvidas"> <span>Sim, mas com dúvidas</span></label>
+            <label class="option"><input type="radio" name="declarou" value="nao"> <span>Não declarei</span></label>
+            <label class="option"><input type="radio" name="declarou" value="nao-sabia"> <span>Nem sabia que precisava</span></label>
+          </fieldset>
+        </div>
+        <div class="error" id="err-4">Selecione uma opção.</div>
+        <div class="nav">
+          <div class="left">
+            <button type="button" data-prev>Voltar</button>
+          </div>
+          <button type="button" class="primary" data-next>Continuar</button>
+        </div>
+      </section>
+
+      <!-- BLOCO 5 -->
+      <section class="step" data-step="5" data-weight="4">
+        <h2>5) Barreiras</h2>
+        <div class="grid">
+          <fieldset>
+            <legend class="hint">O que mais te atrapalha hoje?</legend>
+            <label class="option"><input type="checkbox" name="dor" value="malha"> <span>Medo de errar / malha fina</span></label>
+            <label class="option"><input type="checkbox" name="dor" value="organizacao"> <span>Organização de extratos/estoque/custos</span></label>
+            <label class="option"><input type="checkbox" name="dor" value="regras"> <span>Entender regras (isenção, lucro, compensação)</span></label>
+            <label class="option"><input type="checkbox" name="dor" value="cambio"> <span>Câmbio e cotação corretos</span></label>
+            <label class="option"><input type="checkbox" name="dor" value="suporte"> <span>Alguém para tirar dúvidas na hora</span></label>
+          </fieldset>
+        </div>
+        <div class="error" id="err-5">Selecione ao menos uma barreira.</div>
+        <div class="nav">
+          <div class="left">
+            <button type="button" data-prev>Voltar</button>
+          </div>
+          <button type="button" class="primary" data-next>Continuar</button>
+        </div>
+      </section>
+
+      <!-- BLOCO 6 -->
+      <section class="step" data-step="6" data-weight="5">
+        <h2>6) Objetivo</h2>
+        <div class="grid">
+          <fieldset>
+            <legend class="hint">O que você busca agora?</legend>
+            <label class="option"><input type="radio" name="objetivo" value="declarar"> <span>Declarar meus criptoativos corretamente</span></label>
+            <label class="option"><input type="radio" name="objetivo" value="organizar"> <span>Aprender a me organizar para o próximo imposto</span></label>
+            <label class="option"><input type="radio" name="objetivo" value="risco"> <span>Saber se estou em risco com a Receita</span></label>
+            <label class="option"><input type="radio" name="objetivo" value="ferramentas"> <span>Ter acesso a ferramentas e suporte confiáveis</span></label>
+          </fieldset>
+        </div>
+        <div class="error" id="err-6">Selecione uma opção para concluir.</div>
+        <div class="nav">
+          <div class="left">
+            <button type="button" data-prev>Voltar</button>
+          </div>
+          <button type="submit" class="primary">Ver meu resultado</button>
+        </div>
+      </section>
+
+      <!-- RESULTADO -->
+      <section class="result" id="result">
+
+        <div class="card" id="card_loading"> 
+          <h3>Carregando...</h3>
+          <p>Estamos elaborando um diagnóstico fiscal personalizado para você!</p>
+        </div> 
+
+        <!-- Diagnóstico fiscal -->
+        <div class="card diag" id="card_diag">
+          <span class="kicker">Diagnóstico fiscal</span>
+          <h3 style="margin-top:4px">O que suas respostas indicam</h3>
+          <ul id="diag-list" class="list-check"></ul>
+        </div>
+
+        <!-- Plano de ação -->
+        <div class="card plan" id="card_plan">
+          <span class="kicker">Plano de ação</span>
+          <h3 style="margin-top:4px">Transforme suas pendências em resultados:</h3>
+          <div id="plan"></div>
+          <div class="cta">
+            <a id="whats-btn" class="btn" href="#" target="_blank" rel="noopener">Falar com um especialista</a>
+        </div>
+
+        <div class="nav">
+          <div class="left">
+            <button type="button" id="restart">Refazer quiz</button>
+          </div>
+          <!-- https://drive.google.com/drive/u/1/folders/1GKj3CsxPTPjGqlVMZzX9aEyWYJZIGqMA -->
+          <a class="btnEbook" href="https://drive.google.com/uc?export=download&id=1SwdSuy74tYfF3qlAMYCdBHN8WxAur6I7" target="_blank" rel="noopener">Baixar E-Book Cripto Grátis</a>
+        </div>
+      </section>
+
+    </form>
+  </main>
+
+
+<script>
+(function(){
+  const form = document.getElementById('quiz');
+  const steps = [...document.querySelectorAll('.step')];
+  const bar = document.getElementById('bar');
+  const resultBox = document.getElementById('result');
+  const restartBtn = document.getElementById('restart');
+  const totalSteps = steps.length;
+
+  // Navegação
+  document.querySelectorAll('[data-next]').forEach(btn => btn.addEventListener('click', () => go(+1)));
+  document.querySelectorAll('[data-prev]').forEach(btn => btn.addEventListener('click', () => go(-1)));
+  restartBtn?.addEventListener('click', () => location.reload());
+
+  function currentIndex(){
+    return steps.findIndex(s => s.classList.contains('active'));
+  }
+  function go(delta){
+    const idx = currentIndex();
+    if(delta > 0 && !validateStep(steps[idx])) return;
+    const next = Math.min(Math.max(idx + delta, 0), totalSteps - 1);
+    steps[idx].classList.remove('active');
+    steps[next].classList.add('active');
+    updateBar();
+    // esconder mensagens de erro ao avançar/voltar
+    steps.forEach(s => {
+      const e = s.querySelector('.error'); if(e) e.style.display='none';
+    });
+  }
+  function updateBar(){
+    const idx = currentIndex();
+    const pct = Math.round(((idx) / (totalSteps)) * 100);
+    bar.style.width = Math.min(100, pct + 20) + '%';
+  }
+
+  // Validações leves por bloco
+  function validateStep(stepEl){
+    const step = +stepEl.dataset.step;
+    const err = stepEl.querySelector('.error');
+    const showErr = msg => { if(err){ err.style.display='block'; err.textContent = msg || err.textContent; } };
+    const hideErr = () => { if(err) err.style.display='none'; };
+
+    if(step === 1){
+      const idade = form.querySelector('input[name="idade"]:checked');
+      const genero = form.querySelector('input[name="genero"]:checked');
+      if(!idade || !genero){ showErr(); return false; }
+    }
+    if(step === 2){
+      const quando = form.querySelector('input[name="quando"]:checked');
+      const visao = form.querySelector('input[name="visao"]:checked');
+      if(!quando || !visao){ showErr(); return false; }
+    }
+    if(step === 3){
+      const uso = form.querySelector('input[name="uso"]:checked');
+      if(!uso){ showErr(); return false; }
+    }
+    if(step === 4){
+      const declarou = form.querySelector('input[name="declarou"]:checked');
+      if(!declarou){ showErr(); return false; }
+    }
+    if(step === 5){
+      const dores = [...form.querySelectorAll('input[name="dor"]:checked')];
+      if(dores.length === 0){ showErr(); return false; }
+    }
+    if(step === 6){
+      const obj = form.querySelector('input[name="objetivo"]:checked');
+      if(!obj){ showErr(); return false; }
+    }
+    hideErr(); return true;
+  }
+
+  // Coleta respostas
+  function collect(){
+    const get = name => {
+      const el = form.querySelector('input[name="'+name+'"]:checked');
+      return el ? el.value : null;
+    };
+    const getAll = name => [...form.querySelectorAll('input[name="'+name+'"]:checked')].map(i => i.value);
+
+    return {
+      idade: get('idade'),
+      genero: get('genero'),
+      quando: get('quando'),
+      visao: get('visao'),
+      uso: get('uso'),
+      onde: getAll('onde'),        // array (nacional, estrangeira, defi)
+      declarou: get('declarou'),   // ok, duvidas, nao, nao-sabia
+      dores: getAll('dor'),        // array (malha, organizacao, regras, cambio, suporte)
+      objetivo: get('objetivo')    // declarar, organizar, risco, ferramentas
+    };
+  }
+
+
+
+// === DIAGNÓSTICO FISCAL ===
+function buildDiagnosis(a){
+  const bullets = [];
+  const diag = [];
+  const tags = [];
+  let tom = null;
+
+  //idade e genero
+  diag.push('idade: '+a.idade);
+  
+  if(a.genero != 'n/d'){
+    diag.push('genero: '+a.genero);
+  }
+
+  // Onde opera → obrigações
+  var in1888 = false;
+  if (a.onde.includes('defi')) {
+    in1888 = true;
+    bullets.push("Operar via carteiras ou DEX (DeFi): pode obrigar o envio mensal da <b>IN1888</b> à Receita Federal — mesmo sem saque ou lucro.");
+    diag.push('utilizou carteira e/ou operou em DEX, Defi');
+  }
+  if (a.onde.includes('estrangeira')) {
+    in1888 = true;
+    diag.push('operou em exchange estrangeira');
+    if(a.onde.includes('defi')){
+      bullets.push("Operar via exchange estrangeira: operações fora do Brasil também podem exigir a entrega da <b>IN1888</b>.");
+    }else{
+      bullets.push("Operar via exchange estrangeira: operações fora do Brasil podem exigir a entrega da <b>IN1888</b> - mesmo sem saque ou lucro.");
+    }
+  }
+  if(in1888){
+    diag.push('está sujeito a IN 1888');
+    bullets.push("Atrasos no envio da  <b>IN1888</b> gera multas cumulativas, é essencial calcular e quitá-las o quanto antes.");
+  }
+  if (a.onde.includes('nacional')) {
+    bullets.push("Operar via exchange nacional: eventuais operações com lucro devem ser apuradas mensalmente no <b>GCAP</b>.");
+    diag.push('operou em exchange nacional');
+  }
+
+  // IR — qualquer operação
+  if (a.uso !== 'nao') {
+    diag.push('ainda não operou em exchanges');
+    bullets.push("Criptomoedas precisam ser declaradas no <b>Imposto de Renda</b> anual - bens, saldos, custódia e ganhos.");
+  }
+
+  // Quando começou (janela temporal)
+  if ((a.quando === 'ultimos-5' || a.quando === '5+') && a.onde.length > 0) {
+    bullets.push("Lucros obtidos até 2023, em qualquer exchange (nacional, estrangeira ou DeFi), devem ser informados no <b>GCAP</b>.");
+    bullets.push("É importante revisar os últimos 5 exercícios do <b>Imposto de Renda</b> e retificar se preciso.");
+    diag.push('operou há mais de um ano');
+  }
+  if (a.quando === 'este-ano' && a.onde.length > 0) {
+    bullets.push("Operações realizadas neste ano devem ser apuradas, e os saldos/lucros informados no próximo exercício do <b>Imposto de Renda</b>.");
+    diag.push('operou somente este ano');
+  }
+
+  // Frequência/Histórico
+  if (a.uso === 'frequente') {
+    bullets.push("Negociações frequentes exigem controle detalhado de <b>estoque, custo médio, lucros e impostos</b>.");
+    diag.push('opera com frequência/trader');
+  }
+  if (a.uso === 'parei') {
+    bullets.push("É essencial manter o controle de todas as operações realizadas até o momento, para garantir o cumprimento das obrigações fiscais.");
+    diag.push('já operou mas parou');
+  }
+  if (a.uso === 'nao') {
+    bullets.push("Antes de iniciar suas operações, conheça as regras para aproveitar isenções, compensar prejuízos, declarar corretamente e evitar problemas fiscais.");
+    diag.push('ainda não operou, vai começar');
+  }
+
+  // Status fiscal 
+  if (a.declarou === 'ok') {
+    bullets.push("Mesmo com suporte especializado, é importante revisar periodicamente suas declarações para garantir que todas as informações estejam atualizadas e corretas.");
+    diag.push('já declarou com ajuda de um especialista');
+  }
+  if (a.declarou === 'duvidas') {
+    bullets.push("Buscar esclarecimento das suas dúvidas com um especialista, revise os cálculos, confirme as obrigações e corrija erros para reduzir risco de malha fina.");
+    diag.push('já declarou mas tem dúvidas');
+  }
+  if (a.declarou === 'nao') {
+    bullets.push("Avalie se há obrigatoriedade e regularize o quanto antes para evitar penalidades e regularizar sua situação fiscal.");
+    diag.push('nunca declarou');
+  }
+  if (a.declarou === 'nao-sabia') {
+    bullets.push("É importante declarar suas criptomoedas, atualize-se sobre as regras e limites, confira as obrigações (GCAP/IN1888/IRPF/DARF).");
+    diag.push('não sabia que precisava declarar');
+  }
+
+  //Visao
+  if(a.visao === 'reserva'){
+    bullets.push("Mantenha registros detalhados das aquisições e valor de mercado, pois variações patrimoniais precisam ser informadas na declaração anual.");
+    diag.push('reserva de capital');
+    tom = 'reserva de capital';
+  }
+  if(a.visao === 'protecao'){
+    bullets.push("Mantenha todos os criptoativos declarados da maneira correta, para ter prova de origem e segurança fiscal.");
+    diag.push('proteção de patrimônio');
+    tom = 'proteção de patrimônio';
+  }
+  if(a.visao === 'ganhos'){
+    bullets.push("Mantenha todos os criptoativos declarados da maneira correta e acompanhe com atenção os lucros apurados, para poder usufrui-los no futuro.");
+    diag.push('busca por ganhos futuros');
+    tom = 'busca por ganhos futuros';
+  }
+
+  // retorna o objeto com bullets, diag e tom
+  return {
+    bullets: bullets,
+    diag: diag,
+    tom: tom
+  };
+}
+
+
+
+// === PLANO DE AÇÃO ===
+function buildPlan(a){
+  const actions = [];
+
+  // ---------- OBRIGAÇÕES POR ONDE OPERA ----------
+  const usaNacional     = a.onde.includes('nacional');
+  const usaEstrangeira  = a.onde.includes('estrangeira');
+  const usaDeFi         = a.onde.includes('defi');
+  if (usaNacional) {
+    actions.push("Apurar mensalmente lucros em exchanges nacionais no GCAP, gerando DARF quando devido.");
+  }
+  if (usaEstrangeira || usaDeFi) {
+    actions.push("Verificar obrigação de envio mensal da IN1888 (operações no exterior/DeFi), mesmo sem saque ou lucro.");
+  }
+
+  // ---------- STATUS DE DECLARAÇÃO ----------
+  if (a.declarou === 'duvidas') {
+    actions.push("Conferir se houve DARF devido e, se necessário, retificar GCAP/IRPR para reduzir risco de malha.");
+  }
+  if (a.declarou === 'nao' || a.declarou === 'nao-sabia') {
+    actions.push("Reunir extratos e históricos completos desde o início das operações. Apurar mês a mês, emitir eventuais DARFs em atraso e regularizar o IRPF anual.");
+    if (usaEstrangeira || usaDeFi){
+      actions.push("Checar pendências da IN1888 e calcular multas devidas (se houver) para regularização imediata.");
+    }
+  }
+
+  // ---------- FREQUÊNCIA / HISTÓRICO ----------
+  if (a.uso === 'frequente') {
+    actions.push("Implantar rotina mensal: acompanhar estoque/custo médio, apurar resultado, salvar apuração de cada mês.");
+  }
+  if (a.uso === 'parei') {
+    actions.push("Apurar todo o histórico até a última operação, regularizar entregas em atraso (GCAP/IRPF/IN1888 se aplicável).");
+  }
+  if (a.uso === 'nao') {
+    actions.push("Antes de começar: entender limites de isenção (alienação) e regra de custo médio para pagar menos imposto legalmente.");
+  }
+
+  // ---------- JANELA TEMPORAL ----------
+  if ((a.quando === 'ultimos-5' || a.quando === '5+') && (usaNacional || usaEstrangeira || usaDeFi)) {
+    actions.push("Rever e sanar eventuais inconsistências dos últimos 5 anos (GCAP, IRPF e IN1888 quando aplicável).");
+  }
+  if (a.quando === 'este-ano' && (usaNacional || usaEstrangeira || usaDeFi)) {
+    actions.push("Consolidar operações do ano corrente, separando lucros/prejuízos por mês para o próximo IRPF.");
+  }
+
+  // ---------- DORES (barreiras) ----------
+  if (a.dores.length > 0) {
+    actions.push("Buscar ajuda especializada para sanar dúvidas, revisar cálculos e confirmar obrigações.");
+  }
+
+  // ---------- OBJETIVO (personalização do foco) ----------
+  if (a.objetivo === 'declarar') {
+    actions.push("Priorizar fechamento de apurações e entrega das obrigações antes dos prazos legais.");
+  }
+  if (a.objetivo === 'organizar' || a.objetivo === 'risco') {
+    actions.push("Ter checklist de conformidade (GCAP/IRPF/IN1888/DARF) e definir uma rotina de coleta → apuração fixa todo mês.");
+  }
+  if (a.objetivo === 'ferramentas') {
+    actions.push("Adotar ferramentas que calculem custo médio e gerem relatórios prontos para o preenchimento das obrigações.");
+  }
+
+  // ---------- RENDER COMO <ul><li> ----------
+  if (!actions.length) {
+    return '<p>Nenhuma ação encontrada para o seu perfil.</p>';
+  }
+  const itens = actions
+    .filter((v, i, arr) => arr.indexOf(v) === i) // únicos
+    .map(txt => `<li>${txt}</li>`)
+    .join("");
+
+  return `<ul>${itens}</ul>`;
+}
+
+
+
+// Envio do formulário
+// Número do WhatsApp (somente dígitos)
+const WHATS_PHONE = "5543991548542"; // ex.: 5543999999999
+
+// remove tags HTML (para não mandar <b>...</b> no WhatsApp)
+function stripHtml(s = "") {
+  return String(s).replace(/<[^>]+>/g, "");
+}
+
+// formata respostas do cliente em uma mensagem amigável
+function formatWhatsMessage(answers, bullets) {
+  // mapas de valores para texto amigável
+  const quandoMap = { "5+": "Há mais de 5 anos", "ultimos-5": "Nos últimos 5 anos", "este-ano": "Neste ano" };
+  const visaoMap = { reserva: "Reserva de valor", protecao: "Proteção de patrimônio", ganhos: "Possibilidade de altos ganhos" };
+  const usoMap = { frequente: "Sim, opero com frequência", parei: "Já operei, mas parei", nao: "Ainda não, mas quero começar" };
+  const ondeMap = { nacional: "Exchanges nacionais", estrangeira: "Exchanges internacionais", defi: "Carteiras/DEX (DeFi)" };
+  const declarouMap = { ok: "Sim, com ajuda especializada", duvidas: "Sim, mas com dúvidas", nao: "Não declarei", "nao-sabia": "Nem sabia que precisava" };
+  const doresMap = { malha: "Medo de errar/malha fina", organizacao: "Organização de extratos/estoque/custos", regras: "Entender as Regras", cambio: "Câmbio e cotação corretos", suporte: "Falta de Suporte" };
+  const objetivoMap = { declarar: "Declarar meus criptoativos corretamente", organizar: "Aprender a me organizar para o próximo imposto", risco: "Saber se estou em risco com a Receita", ferramentas: "Ter acesso a ferramentas e suporte confiáveis" };
+
+  // mapeia campos únicos
+  const genero   = answers.genero || "—";
+  const idade    = answers.idade || "—";
+  const quando   = quandoMap[answers.quando]   || answers.quando   || "—";
+  const visao    = visaoMap[answers.visao]     || answers.visao    || "—";
+  const uso      = usoMap[answers.uso]         || answers.uso      || "—";
+  const declarou = declarouMap[answers.declarou] || answers.declarou || "—";
+  const objetivo = objetivoMap[answers.objetivo] || answers.objetivo || "—";
+
+  // mapeia arrays
+  const onde  = (answers.onde  || []).map(v => ondeMap[v]  || v).join(", ") || "—";
+  const dores = (answers.dores || []).map(v => doresMap[v] || v).join(", ") || "—";
+  
+  // montar linhas da mensagem
+  const linhas = [
+    "Olá! Acabei de fazer o Diagnóstico Fiscal de Cripto e quero atendimento especializado.",
+    "",
+    "*Minhas respostas:*",
+    `• Gênero: ${genero}`,
+    `• Idade: ${idade}`,
+    `• Quando comecei: ${quando}`,
+    `• Visão sobre cripto: ${visao}`,
+    `• Opera com criptoativos: ${uso}`,
+    `• Onde operei: ${onde}`,
+    `• Já declarei no IR: ${declarou}`,
+    `• Barreiras: ${dores}`,
+    `• Objetivo agora: ${objetivo}`,
+    ""
+  ];
+
+  return encodeURIComponent(linhas.join("\n"));
+}
+
+
+
+form.addEventListener('submit', e => {
+  e.preventDefault();
+  const idx = currentIndex();
+  if(!validateStep(steps[idx])) return;
+
+  const answers = collect();
+
+  //resertar bar
+  bar.style.width = '0%';
+
+  //carregar progressivamente em 30 segundos
+  let ib = 10;
+  var loading = setInterval(() => {
+    bar.style.width = ib + '%';
+    ib += (Math.random() * (6 - 1) + 1);
+    if(ib > 100) clearInterval(loading);
+  }, 300);
+ 
+  // Esconder o formulário e mostrar a tela de resultado com estado de carregamento
+  form.querySelectorAll('.step').forEach(s => s.style.display='none');
+  resultBox.classList.add('show');
+  
+  
+  // 1) Gerar o Diagnóstico Fiscal
+  const diagResult = buildDiagnosis(answers);
+  const bullets = diagResult.bullets;
+  
+  // 2) Finalizar "loading" e exibir cartões
+  clearInterval(loading);
+  bar.style.width = '100%';
+
+  // esconder o cartão de "Carregando..."
+  document.getElementById('card_loading').style.display = 'none';
+
+  // mostrar os cartões de Diagnóstico e Plano
+  document.getElementById('card_diag').style.display = 'block';
+  document.getElementById('card_plan').style.display = 'block';
+
+  // 3) Preencher o Diagnóstico (lista de bullets)
+  const ul = document.getElementById('diag-list');
+  ul.innerHTML = '';
+  bullets.forEach(txt => {
+    const li = document.createElement('li');
+    li.innerHTML = txt;
+    ul.appendChild(li);
+  });
+
+  // 4) Preencher o Plano de Ação (local)
+  const planDiv = document.getElementById('plan');
+  const planHTML = buildPlan(answers); // buildPlan retorna HTML <ul>...</ul> ou <p>...</p>
+  planDiv.innerHTML = planHTML;
+
+  // 5) Monta link do WhatsApp com mensagem pronta
+  const msg = formatWhatsMessage(answers, bullets);
+  const waHref = `https://wa.me/${WHATS_PHONE}?text=${msg}`;
+  const waBtn = document.getElementById('whats-btn');
+  if (waBtn) waBtn.href = waHref;
+
+})
+  // init
+  updateBar();
+})();
+</script>
+</body>
+</html>
